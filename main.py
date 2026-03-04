@@ -42,9 +42,10 @@ def clay_request(method: str, path: str, body=None):
     url = f"{CLAY_BASE}{path}"
     data = json.dumps(body).encode() if body else None
     req = urllib.request.Request(url, data=data, method=method)
-    req.add_header("Cookie", f"connect.sid={get_clay_cookie()}")
+    req.add_header("Cookie", f"claysession={get_clay_cookie()}")
     req.add_header("Content-Type", "application/json")
     req.add_header("Accept", "application/json")
+    req.add_header("Origin", "https://app.clay.com")
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             text = resp.read().decode()
