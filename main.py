@@ -136,6 +136,31 @@ def health():
     )
 
 
+@app.post("/debug-search")
+def debug_search(req: RefreshRequest):
+    """Temporary debug endpoint to see raw Clay search response."""
+    results = clay_request(
+        "POST",
+        f"/tables/{CONTACT_PROFILES_TABLE}/views/{CONTACT_PROFILES_VIEW}/search",
+        {"searchTerm": req.domain.strip().lower()}
+    )
+    # Return first 2 records with truncated data
+    records = results.get("results", results.get("records", []))
+    sample = []
+    for r in records[:2]:
+        sample.append({
+            "keys": list(r.keys()),
+            "id": r.get("id", "MISSING"),
+            "cells_keys": list(r.get("cells", {}).keys())[:10],
+            "domain_cell": r.get("cells", {}).get(DOMAIN_FIELD, "MISSING"),
+        })
+    return {
+        "top_level_keys": list(results.keys()),
+        "record_count": len(records),
+        "samples": sample,
+    }
+
+
 @app.post("/refresh-contact", response_model=RefreshResponse)
 def refresh_contact(req: RefreshRequest):
     """
