@@ -59,35 +59,35 @@ def clay_request(method: str, path: str, body=None):
 
 
 def find_contact_records_by_domain(domain: str) -> list[dict]:
-    """List Contact Profiles and filter to records matching a domain."""
-    all_records = []
-    offset = 0
-    limit = 100
-    while True:
-        qs = urllib.parse.urlencode({"offset": offset, "limit": limit})
-        result = clay_request(
-            "GET",
-            f"/tables/{CONTACT_PROFILES_TABLE}/views/{CONTACT_PROFILES_VIEW}/records?{qs}"
-        )
-        records = result.get("results", result.get("records", []))
-        all_records.extend(records)
-        if len(records) < limit:
-            break
-        offset += limit
+    """Search Contact Profiles for records matching a domain.
 
-    matches = []
-    for r in all_records:
-        record_id = r.get("id", "")
-        cells = r.get("cells", {})
-        domain_cell = cells.get(DOMAIN_FIELD, {})
-        record_domain = domain_cell.get("value", "")
-        if record_domain and record_domain.lower() == domain.lower():
-            matches.append({
-                "id": record_id,
-                "domain": record_domain,
-            })
+    Uses Clay search API which returns {fieldId, recordId} pairs.
+    We collect unique recordIds where the matching field is the Domain field.
+    If no domain-specific matches, we use all returned recordIds (search is fuzzy).
+    """
+    results = clay_request(
+        "POST",
+        f"/tables/{CONTACT_PROFILES_TABLE}/views/{CONTACT_PROFILES_VIEW}/search",
+        {"searchTerm": domain}
+    )
 
-    return matches
+    hits = results.get("results", [])
+
+    # Collect unique record IDs — prefer domain field matches
+    domain_matches = set()
+    all_record_ids = set()
+    for hit in hits:
+        rid = hit.get("recordId", "")
+        fid = hit.get("fieldId", "")
+        if rid:
+            all_record_ids.add(rid)
+            if fid == DOMAIN_FIELD:
+                domain_matches.add(rid)
+
+    # Use domain-specific matches if any, otherwise all search hits
+    record_ids = domain_matches if domain_matches else all_record_ids
+
+    return [{"id": rid, "domain": domain} for rid in record_ids]
 
 
 def trigger_intent_refresh(record_ids: list[str]) -> dict:
