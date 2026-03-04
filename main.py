@@ -59,30 +59,33 @@ def clay_request(method: str, path: str, body=None):
 
 
 def find_contact_records_by_domain(domain: str) -> list[dict]:
-    """Search Contact Profiles for records matching a domain."""
-    # Use search endpoint
-    results = clay_request(
-        "POST",
-        f"/tables/{CONTACT_PROFILES_TABLE}/views/{CONTACT_PROFILES_VIEW}/search",
-        {"searchTerm": domain}
-    )
+    """List Contact Profiles and filter to records matching a domain."""
+    all_records = []
+    offset = 0
+    limit = 100
+    while True:
+        qs = urllib.parse.urlencode({"offset": offset, "limit": limit})
+        result = clay_request(
+            "GET",
+            f"/tables/{CONTACT_PROFILES_TABLE}/views/{CONTACT_PROFILES_VIEW}/records?{qs}"
+        )
+        records = result.get("records", [])
+        all_records.extend(records)
+        if len(records) < limit:
+            break
+        offset += limit
 
-    # Search returns records — filter to exact domain matches
     matches = []
-    records = results.get("results", results.get("records", []))
-    if isinstance(records, list):
-        for r in records:
-            record_id = r.get("id", "")
-            cells = r.get("cells", {})
-            domain_cell = cells.get(DOMAIN_FIELD, {})
-            record_domain = domain_cell.get("value", "")
-            if record_domain and record_domain.lower() == domain.lower():
-                needs_refresh = cells.get(NEEDS_REFRESH_FIELD, {}).get("value", "")
-                matches.append({
-                    "id": record_id,
-                    "domain": record_domain,
-                    "needs_refresh": needs_refresh,
-                })
+    for r in all_records:
+        record_id = r.get("id", "")
+        cells = r.get("cells", {})
+        domain_cell = cells.get(DOMAIN_FIELD, {})
+        record_domain = domain_cell.get("value", "")
+        if record_domain and record_domain.lower() == domain.lower():
+            matches.append({
+                "id": record_id,
+                "domain": record_domain,
+            })
 
     return matches
 
