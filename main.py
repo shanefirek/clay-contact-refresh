@@ -69,7 +69,7 @@ def find_contact_records_by_domain(domain: str) -> list[dict]:
             "GET",
             f"/tables/{CONTACT_PROFILES_TABLE}/views/{CONTACT_PROFILES_VIEW}/records?{qs}"
         )
-        records = result.get("records", [])
+        records = result.get("results", result.get("records", []))
         all_records.extend(records)
         if len(records) < limit:
             break
@@ -147,7 +147,7 @@ def debug_list():
         "GET",
         f"/tables/{CONTACT_PROFILES_TABLE}/views/{CONTACT_PROFILES_VIEW}/records?{qs}"
     )
-    records = result.get("records", [])
+    records = result.get("results", result.get("records", []))
     sample = []
     for r in records[:2]:
         sample.append({
@@ -220,7 +220,7 @@ def refresh_all_stale():
             "GET",
             f"/tables/{CONTACT_PROFILES_TABLE}/views/{CONTACT_PROFILES_VIEW}/records?{qs}"
         )
-        records = result.get("records", [])
+        records = result.get("results", result.get("records", []))
         all_records.extend(records)
         if len(records) < limit:
             break
