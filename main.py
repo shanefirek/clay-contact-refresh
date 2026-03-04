@@ -139,26 +139,25 @@ def health():
     )
 
 
-@app.post("/debug-search")
-def debug_search(req: RefreshRequest):
-    """Temporary debug endpoint to see raw Clay search response."""
-    results = clay_request(
-        "POST",
-        f"/tables/{CONTACT_PROFILES_TABLE}/views/{CONTACT_PROFILES_VIEW}/search",
-        {"searchTerm": req.domain.strip().lower()}
+@app.get("/debug-list")
+def debug_list():
+    """Temporary debug endpoint to see raw Clay list records response."""
+    qs = urllib.parse.urlencode({"offset": 0, "limit": 2})
+    result = clay_request(
+        "GET",
+        f"/tables/{CONTACT_PROFILES_TABLE}/views/{CONTACT_PROFILES_VIEW}/records?{qs}"
     )
-    # Return first 2 records with truncated data
-    records = results.get("results", results.get("records", []))
+    records = result.get("records", [])
     sample = []
     for r in records[:2]:
         sample.append({
             "keys": list(r.keys()),
             "id": r.get("id", "MISSING"),
-            "cells_keys": list(r.get("cells", {}).keys())[:10],
+            "cells_sample": {k: str(v)[:80] for k, v in list(r.get("cells", {}).items())[:5]},
             "domain_cell": r.get("cells", {}).get(DOMAIN_FIELD, "MISSING"),
         })
     return {
-        "top_level_keys": list(results.keys()),
+        "top_level_keys": list(result.keys()),
         "record_count": len(records),
         "samples": sample,
     }
