@@ -17,7 +17,7 @@ import urllib.parse
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-app = FastAPI(title="Clay Contact Refresh", version="1.0.0")
+app = FastAPI(title="Clay Contact Refresh", version="1.0.5")
 
 # Clay config
 CLAY_BASE = "https://api.clay.com/v3"
@@ -135,32 +135,21 @@ def health():
     return HealthResponse(
         status="ok",
         service="clay-contact-refresh",
-        version="1.0.0",
+        version="1.0.5",
     )
 
 
 @app.get("/debug-list")
 def debug_list():
-    """Temporary debug endpoint to see raw Clay list records response."""
+    """Temporary debug endpoint — raw Clay API response."""
     qs = urllib.parse.urlencode({"offset": 0, "limit": 2})
     result = clay_request(
         "GET",
         f"/tables/{CONTACT_PROFILES_TABLE}/views/{CONTACT_PROFILES_VIEW}/records?{qs}"
     )
-    records = result.get("results", result.get("records", []))
-    sample = []
-    for r in records[:2]:
-        sample.append({
-            "keys": list(r.keys()),
-            "id": r.get("id", "MISSING"),
-            "cells_sample": {k: str(v)[:80] for k, v in list(r.get("cells", {}).items())[:5]},
-            "domain_cell": r.get("cells", {}).get(DOMAIN_FIELD, "MISSING"),
-        })
-    return {
-        "top_level_keys": list(result.keys()),
-        "record_count": len(records),
-        "samples": sample,
-    }
+    # Return raw response truncated
+    raw = json.dumps(result)[:3000]
+    return {"raw": raw, "version": "1.0.5"}
 
 
 @app.post("/refresh-contact", response_model=RefreshResponse)
